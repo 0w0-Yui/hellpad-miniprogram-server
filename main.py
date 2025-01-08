@@ -117,7 +117,7 @@ def is_port_in_use(port):
 
 if __name__ == "__main__":
     if len(sys.argv) == 1:
-        INTERVAL = 0.3
+        INTERVAL = 0.2
         print(f"default interval: {INTERVAL}")
     else:
         INTERVAL = float(sys.argv[1])
