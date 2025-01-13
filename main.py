@@ -4,6 +4,7 @@ import web
 import json
 import logging
 import time
+import os
 from keywin import keyboard, KeyCode
 
 
@@ -27,8 +28,19 @@ def get_ip():
 
 if __name__ == "__main__":
     ip = get_ip()
+    strat_key = ""
+    strat_key_str = ""
 
-    strat_key = getattr(KeyCode, "VK_LCONTROL")
+    if not os.path.isfile("config.txt"):
+        config = open("config.txt", "w+")
+        strat_key_str = "VK_LCONTROL"
+        config.write(json.dumps({"key": strat_key_str}))
+        strat_key = getattr(KeyCode, strat_key_str)
+
+    config = open("config.txt", "r+")
+    config_json = json.loads(config.read())
+    strat_key_str = config_json["key"]
+    strat_key = getattr(KeyCode, strat_key_str)
     print("Changing stratagem key with --key VK_KEYNAME")
     print(
         "Find keyname with https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes"
@@ -38,8 +50,13 @@ if __name__ == "__main__":
 
     if len(sys.argv) > 1:
         if sys.argv[1] == "--key":
-            strat_key = getattr(KeyCode, sys.argv[2])
-            print(f'Stratagem key set to "{sys.argv[2]}"')
+            strat_key_str = sys.argv[2]
+            strat_key = getattr(KeyCode, strat_key_str)
+            config = open("config.txt", "w")
+            config.write(json.dumps({"key": strat_key_str}))
+    print(f'Stratagem key: "{strat_key_str}"')
+    config.flush()
+    config.close()
 
 
 class Log:
@@ -82,11 +99,16 @@ class WebApplication(web.application):
 
 
 class freedom:
+    strat_key = ""
+
     def POST(self):
+        if self.strat_key == "":
+            with open("config.txt", "r+") as f:
+                self.strat_key = getattr(KeyCode, json.loads(f.read())["key"])
         data = json.loads(web.data())
         key = data["key"]
         if data["is_first"]:
-            keyboard.hold(strat_key)
+            keyboard.hold(self.strat_key)
         elif data["is_key"]:
             if key == "num2":
                 keyboard.hold(KeyCode.VK_DOWN)
@@ -103,7 +125,7 @@ class freedom:
         else:
             print(f" {data["text"]}")
             time.sleep(0.5)
-            keyboard.release(strat_key)
+            keyboard.release(self.strat_key)
         time.sleep(0.2)
         keyboard.release(KeyCode.VK_DOWN)
         keyboard.release(KeyCode.VK_UP)
