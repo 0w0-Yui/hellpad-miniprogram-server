@@ -1,19 +1,45 @@
+import sys
 import socket
 import web
-import sys
 import json
 import logging
 import time
-from ahk import AHK
+from keywin import keyboard, KeyCode
 
-ahk = AHK(executable_path="AutoHotkey64.exe")
 
 HOST = "0.0.0.0"
 PORT = 2828
 
-INTERVAL = 0
-
 urls = ("/", "freedom")
+
+
+def get_ip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(("10.255.255.255", 1))
+        IP = s.getsockname()[0]
+    except Exception:
+        IP = "127.0.0.1"
+    finally:
+        s.close()
+    return IP
+
+
+if __name__ == "__main__":
+    ip = get_ip()
+
+    strat_key = getattr(KeyCode, "VK_LCONTROL")
+    print("Changing stratagem key with --key VK_KEYNAME")
+    print(
+        "Find keyname with https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes"
+    )
+
+    print(f"Hellpad Terminal IP: {ip}")
+
+    if len(sys.argv) > 1:
+        if sys.argv[1] == "--key":
+            strat_key = getattr(KeyCode, sys.argv[2])
+            print(f'Stratagem key set to "{sys.argv[2]}"')
 
 
 class Log:
@@ -37,7 +63,7 @@ class Log:
                     s = s[:-1]
                 if s == "":
                     return
-                if self.ignore(s):
+                if True:
                     return
                 self.logger.debug(s)
 
@@ -58,70 +84,35 @@ class WebApplication(web.application):
 class freedom:
     def POST(self):
         data = json.loads(web.data())
-        # if data["is_key"]:
-        #     print(f"{data["key"]}".replace("num", ""), end="")
-        #     pyautogui.press(f"{data["key"]}")
-        # else:
-        #     print(f" {data["text"]}")
-        # # return "freedom"
-        # if is_first:
-        #     keyboard.hold(KeyCode.VK_NUMPAD0)
-
         key = data["key"]
         if data["is_first"]:
-            ahk.key_down("lcontrol")
+            keyboard.hold(strat_key)
         elif data["is_key"]:
             if key == "num2":
-                ahk.key_down("down")
-                # keyboard.press(KeyCode.VK_DOWN)
+                keyboard.hold(KeyCode.VK_DOWN)
                 print(f"{data["key"]}".replace("num", ""), end="")
-                # time.sleep(0.3)
-                # keyboard.release(KeyCode.VK_DOWN)
             elif key == "num4":
-                ahk.key_down("left")
-                # keyboard.press(KeyCode.VK_LEFT)
+                keyboard.hold(KeyCode.VK_LEFT)
                 print(f"{data["key"]}".replace("num", ""), end="")
-                # time.sleep(0.3)
-                # # time.sleep(100)
-                # keyboard.release(KeyCode.VK_LEFT)
             elif key == "num6":
-                ahk.key_down("right")
-                # keyboard.press(KeyCode.VK_RIGHT)
+                keyboard.hold(KeyCode.VK_RIGHT)
                 print(f"{data["key"]}".replace("num", ""), end="")
-                # time.sleep(0.3)
-                # # time.sleep(100)
-                # keyboard.release(KeyCode.VK_RIGHT)
             elif key == "num8":
-                # keyboard.hold(KeyCode.VK_UP)
-                ahk.key_down("up")
+                keyboard.hold(KeyCode.VK_UP)
                 print(f"{data["key"]}".replace("num", ""), end="")
-                # time.sleep(0.3)
-                # # time.sleep(100)
-                # keyboard.release(KeyCode.VK_UP)
         else:
-            print(f" {data["text"]}", end="")
-            print(" released")
+            print(f" {data["text"]}")
             time.sleep(0.5)
-            ahk.key_up("lcontrol")
+            keyboard.release(strat_key)
         time.sleep(0.2)
-        ahk.key_up("down")
-        ahk.key_up("up")
-        ahk.key_up("left")
-        ahk.key_up("right")
-
-
-def is_port_in_use(port):
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as test:
-        return test.connect_ex((HOST, PORT)) == 0
+        keyboard.release(KeyCode.VK_DOWN)
+        keyboard.release(KeyCode.VK_UP)
+        keyboard.release(KeyCode.VK_LEFT)
+        keyboard.release(KeyCode.VK_RIGHT)
+        return "freedom forever"
 
 
 if __name__ == "__main__":
-    if len(sys.argv) == 1:
-        INTERVAL = 0.2
-        print(f"default interval: {INTERVAL}")
-    else:
-        INTERVAL = float(sys.argv[1])
-        print(f"interval: {INTERVAL}")
-
+    print("Terminal start on ", end="")
     webapp = WebApplication(urls, globals())
     webapp.run(PORT, Log)
